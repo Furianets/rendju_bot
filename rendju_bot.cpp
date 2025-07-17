@@ -130,23 +130,65 @@ private:
 }
 
     bool find_blocking_move(int& best_x, int& best_y, char player, char opponent) {
-        for (int x = 0; x < BOARD_SIZE; ++x) {
-            for (int y = 0; y < BOARD_SIZE; ++y) {
-                if (!is_valid_move(x, y)) continue;
-                board_[x][y] = opponent;
-                if (check_win(x, y, opponent)) {
-                    board_[x][y] = '.';
-                    if (is_valid_move(x, y)) { 
-                        best_x = x;
-                        best_y = y;
-                        return true;
+    for (int x = 0; x < BOARD_SIZE; ++x) {
+        for (int y = 0; y < BOARD_SIZE; ++y) {
+            if (!is_valid_move(x, y)) continue;
+            board_[x][y] = opponent;
+            bool is_threat = false;
+            
+            if (check_win(x, y, opponent)) {
+                is_threat = true;
+            } else {
+                
+                for (int dx = -1; dx <= 1; ++dx) {
+                    for (int dy = -1; dy <= 1; ++dy) {
+                        if (dx == 0 && dy == 0) continue;
+                        int count = 1;
+                        for (int step = 1; step < WIN_LENGTH - 1; ++step) {
+                            int nx = x + dx * step;
+                            int ny = y + dy * step;
+                            if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && board_[nx][ny] == opponent) {
+                                count++;
+                            } else {
+                                break;
+                            }
+                        }
+                        if (count >= 4) is_threat = true;
+                        
+                        if (count == 3) {
+                            for (int ddx = -1; ddx <= 1; ++ddx) {
+                                for (int ddy = -1; ddy <= 1; ++ddy) {
+                                    if ((ddx == 0 && ddy == 0) || (ddx == dx && ddy == dy)) continue;
+                                    int other_count = 0;
+                                    for (int step = 1; step < WIN_LENGTH - 1; ++step) {
+                                        int nx = x + ddx * step;
+                                        int ny = y + ddy * step;
+                                        if (nx >= 0 && nx < BOARD_SIZE && ny >= 0 && ny < BOARD_SIZE && board_[nx][ny] == opponent) {
+                                            other_count++;
+                                        } else {
+                                            break;
+                                        }
+                                    }
+                                    if (other_count >= 3) is_threat = true;
+                                }
+                            }
+                        }
                     }
                 }
-                board_[x][y] = '.';
             }
+            if (is_threat) {
+                board_[x][y] = '.';
+                if (is_valid_move(x, y)) {
+                    best_x = x;
+                    best_y = y;
+                    return true;
+                }
+            }
+            board_[x][y] = '.';
         }
-        return false;
     }
+    return false;
+}
 
     int minimax(int depth, int alpha, int beta, bool maximizing, char player, char opponent) {
         if (std::chrono::steady_clock::now() - start_time > MOVE_TIMEOUT || depth < 0) {
